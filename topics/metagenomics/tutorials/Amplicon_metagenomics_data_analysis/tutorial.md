@@ -20,7 +20,7 @@ contributors:
 
 ![](../../images/FROGS_logo.png)
 
-# Introduction
+# Overview
 {:.no_toc}
 
 **FROGS**: Find Rapidly OTUs with Galaxy Solution
@@ -40,21 +40,7 @@ contributors:
 >
 {: .agenda}
 
-# Amplicon metagenomic data analysis with FROGS 
-
-Give some background about what the trainees will be doing in the section.
-
-Below are a series of hand-on boxes, one for each tool in your workflow file.
-Often you may wish to combine several boxes into one or make other adjustments such
-as breaking the tutorial into sections, we encourage you to make such changes as you
-see fit, this is just a starting point :)
-
-Anywhere you find the word "***TODO***", there is something that needs to be changed
-depending on the specifics of your tutorial.
-
-have fun!
-
-## Get data
+# Get data
 
 > ### {% icon hands_on %} Hands-on: Data upload
 >
@@ -82,6 +68,36 @@ have fun!
 >
 {: .hands_on}
 
+# Quality control ?
+
+> ### {% icon hands_on %} **Assess the quality of a FASTQ file**
+>
+> * Switch to Historynamed "multiplexed" (if needed)
+> * Run FastqCon dataset multiplexed.fastq
+> * Explore the HTML report
+>
+{: .hands_on}
+
+> ### {% icon question %} Questions
+>
+>   1. How many sequences in file ?
+>   2. Sequence length range ?
+>   3. Length of the majority of sequences?
+>   4. Can you explain the graphic named "Per base sequence quality" ?
+>
+>   > ### {% icon solution %} Solution
+>   >
+>   > 1. Answer for question1
+>   > 2. Answer for question2
+>   >
+>   {: .solution}
+>
+{: .question}
+
+# Demultiplexing ?
+
+
+
 # FROGS analysis
 
 It comes first a description of the step: some background and some theory.
@@ -99,9 +115,14 @@ The idea is to keep the theory description before quite simple to focus more on 
 
 A big step can have several subsections or sub steps:
 
-## FROGS Pre-process
+## Clean extended fragments and dereplicate
 
-> ### {% icon hands_on %} **FROGS Pre-process merging, denoising and dereplication**
+We have here Illumina data, 2x250 bp. The amplicon is the 16S V3-V4 region (min : 320 bp, max : 430 bp, 90% of fragments < 390 bp).
+The primers are :
+* 5’ CCGTCAATTC
+* 3’ CCGCNGCTGCT
+
+> ### {% icon hands_on %} **FROGS Pre-process denoising and dereplication**
 >
 >    {% icon tool %} with the following parameters:
 >    * *Sequencer:* `Illumina`
@@ -116,13 +137,13 @@ A big step can have several subsections or sub steps:
 >
 >    > ### {% icon comment %} Comment
 >    >
->    >Be careful to reverse-complementthe 3’ primer. Indeed, R2 pair has been reverse-complemented during merging process.
+>    > Be careful to reverse-complementthe 3’ primer. Indeed, R2 pair has been reverse-complemented during merging process.
 >    >
->    >Sequencing platforms often provide you already merged data and raw R1 and R2 paired-end data. Prefer doing the merging process yourself or check the parameters and tools they used. It is very interesting to know how many pairs do not merge.
+>    > Sequencing platforms often provide you already merged data and raw R1 and R2 paired-end data. Prefer doing the merging process yourself or check the parameters and tools they used. It is very interesting to know how many pairs do not merge.
 >    >
->    >If your input sequences have no more primers, choose the Custom protocol in «SequencingProtocol» section. It may happen if the sequencing platform removed primers or if you want to use another tools to pre-process your data.
+>    > If your input sequences have no more primers, choose the Custom protocol in "SequencingProtocol" section. It may happen if the sequencing platform removed primers or if you want to use another tools to pre-process your data.
 >    >
->    >If you are not sure of the amplicon size, do not hesitate to check the length distribution graphics to adjust your filters.
+>    > If you are not sure of the amplicon size, do not hesitate to check the length distribution graphics to adjust your filters.
 >    {: .comment}
 >
 >    > ### {% icon param-file %} Outputs
@@ -134,16 +155,48 @@ A big step can have several subsections or sub steps:
 >
 {: .hands_on}
 
+> ### {% icon question %} Questions
+>
+> 1. How many sequences are remaining?
+> 2. Why this number does not correspond to the number of sequences in the FASTA file "dereplicated.fasta" ?
+> 3. Why is the file "count.tsv" very important ?
+> 4. How can you perform your first comparison of samples/replicates ?
+>
+> > ### {% icon solution %} Solution
+> >
+> > 1. Answer for question1
+> > 2. Answer for question2
+> >
+> {: .solution}
+>
+{: .question}
 
-## FROGS Clustering swarm
+
+## Group cleaned sequences into OTUs
+
+We need a method to group sequences to adress biological biases.
+
+![Bio biases](../../images/bio_biases.png)
+
+Gene copy number spans over an order of magnitude, from 1 to up to 15 in Bacteria, but only up to 5 in Archaea
+Only a minority of bacterial genomes harbors identical 16S rRNA gene copies
+Sequence diversity increases with increasing copy numbers. 
+While certain taxa harbor dissimilar 16S rRNAgenes, others contain sequences common to multiple species.
+
+* Variable number of 16S gene copies
+* Sequence diversity among the same organism
+* Some 16S sequences are common to multiple species, and sequence diversity differs among phyla
+
+Why do we need Swarm clustering ?
 
 * A robust and fast clustering method for amplicon-based studies.
-* The purpose of swarm is to provide a novel clustering algorithm to handle large
-sets of amplicons.
-* swarm results are resilient to input-order changes and rely on a small local
-linking threshold d, the maximum number of differences between two amplicons.
-* swarm forms stable high-resolution clusters, with a high yield of biological
-information.
+* The purpose of swarm is to provide a novel clustering algorithm to handle large sets of amplicons.
+* Swarm results are resilient to input-order changes and rely on a small local linking threshold d, the maximum number of differences between two amplicons.
+* Swarm forms stable high-resolution clusters, with a high yield of biological information.
+
+Abundant sequences/OTU are clustered at 90% ID, small OUT are clustered > 97% ID
+
+![Swarm](../../images/swarm.png)
 
 > ### {% icon hands_on %} **FROGS Clustering swarm**
 >
@@ -151,23 +204,16 @@ information.
 >    - {% icon param-file %} *"Sequences file"*: `FROGS Clustering swarm: abundance.biom` (output of **FROGS Pre-process** )
 >    - {% icon param-file %} *"Count file"*: `FROGS Clustering swarm: seed_sequences.fasta` (output of **FROGS Pre-process** )
 >
->    ***TODO***: *Check parameter descriptions*
->
->    ***TODO***: *Consider adding a comment or tip box*
->
 >    > ### {% icon comment %} Comment
->    > Swarm make lots of singletons, corresponding to a lot of cluster but few
-sequences
+>    > Swarm make lots of singletons, corresponding to a lot of cluster but few sequences.
 >    >
->    >Lots ot clusters are specific of one sample, and have a few sequences (probably
-chimera, errors ...)
+>    > Lots ot clusters are specific of one sample, and have a few sequences (probably chimera, errors ...)
 >    >
->    >The aggregation distance of 3 is particularly adapted with 16S amplicon.
+>    > The aggregation distance of 3 is particularly adapted with 16S amplicon.
 >    >
->    >Do not hesitate to play with this distance and compare final results
+>    > Do not hesitate to play with this distance and compare final results
 >    >
->    >If you have a lot of input sequences, the denoising step is crucial to reduce the
-execution time. Its impact on OTU composition is very limited.
+>    > If you have a lot of input sequences, the denoising step is crucial to reduce the execution time. Its impact on OTU composition is very limited.
 >    {: .comment}
 >
 >    > ### {% icon param-file %} Outputs
@@ -178,24 +224,6 @@ execution time. Its impact on OTU composition is very limited.
 >
 {: .hands_on}
 
-***TODO***: *Consider adding a question to test the learners understanding of the previous exercise*
-
-> ### {% icon question %} Questions
->
-> 1. Question1?
-> 2. Question2?
->
-> > ### {% icon solution %} Solution
-> >
-> > 1. Answer for question1
-> > 2. Answer for question2
-> >
-> {: .solution}
->
-{: .question}
-
-## FROGS Clusters stat
-
 > ### {% icon hands_on %} **FROGS Clusters stat**
 >
 >    {% icon tool %} with the following parameters:
@@ -203,7 +231,7 @@ execution time. Its impact on OTU composition is very limited.
 >
 >    > ### {% icon comment %} Comment
 >    >
->    > A comment about the tool or something else. This box can also be in the main text
+>    >
 >    {: .comment}
 >
 >    > ### {% icon param-file %} Outputs 
@@ -211,12 +239,14 @@ execution time. Its impact on OTU composition is very limited.
 >    {: .comment}
 {: .hands_on}
 
-***TODO***: *Consider adding a question to test the learners understanding of the previous exercise*
-
 > ### {% icon question %} Questions
 >
-> 1. Question1?
-> 2. Question2?
+> 1. How many OTUs are formed?
+> 2. What is the length of the majority of cleaned sequences ?
+> 3. What can we say by observing the sequence distribution ?
+> 4. How many sequences are in the biggest OTU ?
+> 5. According to the experimental design, how to interpret shared and own clusters ?
+> 6. How do you interpret hierarchical clustering ?
 >
 > > ### {% icon solution %} Solution
 > >
@@ -227,7 +257,23 @@ execution time. Its impact on OTU composition is very limited.
 >
 {: .question}
 
-## FROGS Remove chimera
+## Detect and remove chimera
+
+* Up to 70% of chimeric sequences in the unique amplicon pool of PCR-amplified samples
+* Chimera: from 5 to 45% of reads
+
+![Formation of chimeric sequences during PCR](../../images/chimeric_sequences.png)
+
+But how can we identify Chimera ?
+
+* Reference based: against a database of "genuine" sequences
+* De novo: against abundant sequences in the samples
+* Using a smart experimental design (when available)
+
+In several cases, the inferred number of OTUs largely exceeded the total number of cells in the samples.
+Such inflation of the OTU numbers corresponded to ‘rare biosphere’ taxa, composed largely of artifacts. 
+In general, chimera detection removes many low abundance OTUs.
+Many SOP recommend abundance filters.
 
 > ### {% icon hands_on %} FROGS Remove chimera
 >
@@ -241,15 +287,13 @@ execution time. Its impact on OTU composition is very limited.
 >    ***TODO***: *Consider adding a comment or tip box*
 >
 >    > ### {% icon comment %} Comment
->    >Run it after clustering to gain time whitouhout losing sensibility
+>    > Run it after clustering to gain time whitouhout losing sensibility
 >    >
->    >Low-abundant OTUs will also be removed with filters. Nevertheless, it is
+>    > Low-abundant OTUs will also be removed with filters. Nevertheless, it is
 >    >
->    >important to check the proportion of detected chimeric sequences in your
-samples.
+>    > Important to check the proportion of detected chimeric sequences in your samples.
 >    >
->    >The chimera rate can reach 40% ! It is very dependant to amplicon and
-ecosystem composition.
+>    > The chimera rate can reach 40% ! It is very dependant to amplicon and ecosystem composition.
 >    {: .comment}
 >    >
 >    > ### {% icon param-file %} Outputs
@@ -278,7 +322,19 @@ ecosystem composition.
 >
 {: .question}
 
-## FROGS Filters
+## Apply filters on abundance and contamination
+
+How can we suppress some of the remaining artefacts ?
+Why filtering ?
+
+Considering that:
+* low abundant sequences are often chimeric
+* it is impossible to distinguish rare biosphere and artefacts
+* we have better accuracy after removing singletons
+* we can use replicates to keep good OTUs
+* affiliation runs long time ! Faster without singleton 
+
+That's why we used FROGS filters to keep only OTUs present in at least 3 samples, and with a min relative abundanceof 0.00005.
 
 > ### {% icon hands_on %} **FROGS Filters**
 >
@@ -313,8 +369,9 @@ ecosystem composition.
 
 > ### {% icon question %} Questions
 >
-> 1. Question1?
-> 2. Question2?
+> 1. How many OTUs are remaining ? How many sequences ?
+> 2. What is the size of the smallest OTU ?
+> 3. Which information shows that this process is very important ?
 >
 > > ### {% icon solution %} Solution
 > >
@@ -325,7 +382,13 @@ ecosystem composition.
 >
 {: .question}
 
-## FROGS Affiliation OTU
+## Assign OTUs using reference databank
+
+What can we do if several species have the same 16S gene ?
+
+IMAGE (p208)
+
+Run FROGS Affiliation OTU using blast only on Silva 132 pintail 100 databank
 
 > ### {% icon hands_on %} **FROGS Affiliation OTU**
 >
@@ -335,13 +398,12 @@ ecosystem composition.
 >    * {% icon param-file %} *"OTU seed sequence"*: `output_fasta` (output of **FROGS Filters**)
 >    * {% icon param-file %} *"Abundance file"*: `output_biom` (output of **FROGS Filters**)
 >
->    ***TODO***: *Check parameter descriptions*
->
->    ***TODO***: *Consider adding a comment or tip box*
->
 >    > ### {% icon comment %} Comment
 >    >
->    > A comment about the tool or something else. This box can also be in the main text
+>    > * A lot of databanks are available for affiliating OTUs
+>    > * A multi-affiliation is not a bad affiliation! The amplicon sequence maybe identic. Choosing one randomly is not a good choice.
+>    > * If you want to use an home-made databank (or one not availableyet), contact us to add it. You cannot add it by yourself.
+>    > * Your knowledge of the studied ecosystem can permit you to detect errors in affiliation.
 >    {: .comment}
 >    >
 >    > ### {% icon param-file %} Outputs
@@ -353,13 +415,10 @@ ecosystem composition.
 
 ![FROGS Affiliation results (html file)](../../images/frogs_affilitation.png)
 
-
-
-***TODO***: *Consider adding a question to test the learners understanding of the previous exercise*
-
 > ### {% icon question %} Questions
 >
-> 1. Question1?
+> 1. How many sequences are affiliated by blast ?
+> 2. How do you understand the "Multi-affiliation by taxonomicrank" graphic?
 > 2. Question2?
 >
 > > ### {% icon solution %} Solution
@@ -371,7 +430,7 @@ ecosystem composition.
 >
 {: .question}
 
-## FROGS Affiliations stat
+Run FROGS Affiliations stat
 
 > ### {% icon hands_on %} **FROGS Affiliations stat**
 >
@@ -379,10 +438,6 @@ ecosystem composition.
 >    * {% icon param-file %} *"Abundance file"*: `affiliation.biom` (output of **FROGS Affiliation OTU** {% icon tool %})
 >    * *Rarefaction ranks*: `Class Order Family Genus Species`
 >    * *"Affiliation processed"*: `FROGS blast`
->
->    ***TODO***: *Check parameter descriptions*
->
->    ***TODO***: *Consider adding a comment or tip box*
 >
 >    > ### {% icon comment %} Comment
 >    >
@@ -397,23 +452,9 @@ ecosystem composition.
 
 ![FROGS Affiliation results (html file)](../../images/frogs_taxa_distribution.png)
 
-***TODO***: *Consider adding a question to test the learners understanding of the previous exercise*
+## Filter OTUs by keeping only those with a perfect alignment on full-length sequence
 
-> ### {% icon question %} Questions
->
-> 1. Question1?
-> 2. Question2?
->
-> > ### {% icon solution %} Solution
-> >
-> > 1. Answer for question1
-> > 2. Answer for question2
-> >
-> {: .solution}
->
-{: .question}
-
-## FROGS Filters
+Do not forget, with filter tool we can filter the data based on their affiliation.
 
 > ### {% icon hands_on %} **FROGS Filters**
 >
@@ -426,10 +467,6 @@ ecosystem composition.
 >        - *"Minimum identity % (between 0 and 1)"*: `1.0`
 >        - *"Minimum coverage % (between 0 and 1)"*: `1.0`
 >    * *"Contaminant databank"*: `No filters`
->
->    ***TODO***: *Check parameter descriptions*
->
->    ***TODO***: *Consider adding a comment or tip box*
 >
 >    > ### {% icon comment %} Comment
 >    >
@@ -451,8 +488,7 @@ ecosystem composition.
 
 > ### {% icon question %} Questions
 >
-> 1. Question1?
-> 2. Question2?
+> 1. How many clusters are remaning ?
 >
 > > ### {% icon solution %} Solution
 > >
@@ -463,7 +499,20 @@ ecosystem composition.
 >
 {: .question}
 
-## FROGS Tree
+## Create a phylogentic tree from sequences
+
+Why a phylogenetic tree ?
+
+With Phyloseq, you will be able to compute unifrac distances, based on a phylogenetic tree.
+When you do sequences alignement with Frogs, you have two options:
+* With a template: Pynast
+    - faster
+    - Sequences must have >= 75% ID with template or are discarded
+* Without template: Mafft
+    - Longer
+    - Takes into account all sequences 
+
+You can then build a Tree, this is a fast building limited to 10 000 sequences.
 
 > ### {% icon hands_on %} **FROGS Tree**
 >
